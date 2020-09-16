@@ -1,0 +1,54 @@
+
+This is pkg-config-lite-0.26-1, based on pkg-config-0.26.
+
+pkg-config-lite is based on pkg-config, but is built with a glib code snippet
+which eliminates the glib dependency, so it is possible once again to build
+and run pkg-config without dependencies.
+
+I have created this little 'fork' to avoid having to install another glib DLL
+under MinGW. This avoids conflicts if you install the GTK or gtkmm SDK which
+then installs another instance of glib.
+
+Chances are that pkg-config-lite works better on Windows and other systems
+whenever a utf8 locale is not used in case where non-ASCII path/file names are
+used at some point because i've also removed all code for translations between
+charmaps and utf8 from the glib code as it won't help anyway since pkg-config
+is otherwise using lots of libc functions for file operations.
+
+It's also nice to have a dependency-free pkg-config because it eliminates the
+circular dependency between pkg-config and glib, and in my humble opinion,
+pkg-config is so low-level that it should not depend on anything as it is
+supposed to be used to build any other software/library. Also, that little bit
+of code required from glib barely justifies using glib with pkg-config as you
+can see from the very small size of the glib code snippet.
+
+I have modified the original pkg-config sourcecode as little as required to
+make this work. The glib code snippet does not need to be configured at all;
+it should compile fine on most common platforms. Hopefully, future versions
+of pkg-config will use less glib code rather than more.
+
+The version number is always identical with the original pkg-config version
+it was derived from, as it will always be functionally compatible.
+In the case of bugfix updates, the build number for pkg-config-lite is noted
+on top of this readme, and only in this readme. The program itself will always
+answer --version queries with the original version number from pkg-config.
+
+All changes fall under the copyright of the original authors.
+
+FreeBSD note:
+  All .pc files are stored in /usr/local/libdata/ which is not explicitly
+  supported by pkg-config, neither by pkg-config-lite.
+  The FreeBSD port/package for pkg-config comes with a patch.
+  To get a custom pkg-config-lite working, the easiest way to do this would be
+  to create a symlink like:
+    [sudo] ln -s /usr/local/lib/pkgconfig ../libdata/pkgconfig
+  or (absolute):
+    [sudo] ln -s /usr/local/lib/pkgconfig /usr/local/libdata/pkgconfig
+
+Project URL:
+  http://pkgconfiglite.sourceforge.net
+
+Author: Oliver Lange.
+
+The original pkg-config release is available here:
+  http://www.freedesktop.org/wiki/Software/pkg-config

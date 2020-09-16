@@ -1,6 +1,6 @@
-/* 
+/*
  * Copyright (C) 2001, 2002 Red Hat Inc.
- * 
+ *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
  * published by the Free Software Foundation; either version 2 of the
@@ -10,7 +10,7 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
@@ -74,18 +74,18 @@ add_search_dirs (const char *path, const char *separator)
       char **search_dirs;
       char **iter;
 
-      search_dirs = g_strsplit (path, separator, -1);
-    
+      search_dirs = g_strsplit (path, separator, 0);
+
       iter = search_dirs;
       while (*iter)
         {
           debug_spew ("Adding directory '%s' from PKG_CONFIG_PATH\n",
                       *iter);
           add_search_dir (*iter);
-          
+
           ++iter;
         }
-      
+
       g_strfreev (search_dirs);
 }
 
@@ -104,7 +104,7 @@ static gboolean
 ends_in_dotpc (const char *str)
 {
   int len = strlen (str);
-  
+
   if (len > EXT_LEN &&
       str[len - 3] == '.' &&
       FOLD (str[len - 2]) == 'p' &&
@@ -121,7 +121,7 @@ gboolean
 name_ends_in_uninstalled (const char *str)
 {
   int len = strlen (str);
-  
+
   if (len > UNINSTALLED_LEN &&
       FOLDCMP ((str + len - UNINSTALLED_LEN), "uninstalled") == 0)
     return TRUE;
@@ -134,7 +134,7 @@ name_ends_in_uninstalled (const char *str)
  * locations, ignoring duplicates
  */
 static void
-scan_dir (const char *dirname)
+scan_dir (char *dirname)
 {
   DIR *dir;
   struct dirent *dent;
@@ -170,14 +170,14 @@ scan_dir (const char *dirname)
   if (!dir)
     {
       debug_spew ("Cannot open directory '%s' in package search path: %s\n",
-                  dirname, g_strerror (errno));
+                  dirname, strerror (errno));
       return;
     }
 
   debug_spew ("Scanning directory '%s'\n", dirname);
 
   scanned_dir_count += 1;
-  
+
   while ((dent = readdir (dir)))
     {
       int len = strlen (dent->d_name);
@@ -187,7 +187,7 @@ scan_dir (const char *dirname)
           char *pkgname = g_malloc (len - 2);
 
           debug_spew ("File '%s' appears to be a .pc file\n", dent->d_name);
-          
+
 	  strncpy (pkgname, dent->d_name, len - EXT_LEN);
           pkgname[len-EXT_LEN] = '\0';
 
@@ -202,7 +202,7 @@ scan_dir (const char *dirname)
               strncpy (filename, dirname, dirnamelen);
               filename[dirnamelen] = G_DIR_SEPARATOR;
               strcpy (filename + dirnamelen + 1, dent->d_name);
-              
+
 	      if (g_file_test(filename, G_FILE_TEST_IS_REGULAR) == TRUE) {
 		  g_hash_table_insert (locations, pkgname, filename);
 		  g_hash_table_insert (path_positions, pkgname,
@@ -256,11 +256,11 @@ package_init ()
   if (!initted)
     {
       initted = TRUE;
-      
+
       packages = g_hash_table_new (g_str_hash, g_str_equal);
       locations = g_hash_table_new (g_str_hash, g_str_equal);
       path_positions = g_hash_table_new (g_str_hash, g_str_equal);
-      
+
       add_virtual_pkgconfig_package ();
 
       g_slist_foreach (search_dirs, (GFunc)scan_dir, NULL);
@@ -272,14 +272,14 @@ internal_get_package (const char *name, gboolean warn)
 {
   Package *pkg = NULL;
   const char *location;
-  
+
   pkg = g_hash_table_lookup (packages, name);
 
   if (pkg)
     return pkg;
 
   debug_spew ("Looking for package '%s'\n", name);
-  
+
   /* treat "name" as a filename if it ends in .pc and exists */
   if ( ends_in_dotpc (name) )
     {
@@ -299,17 +299,17 @@ internal_get_package (const char *name, gboolean warn)
           pkg = internal_get_package (un, FALSE);
 
           g_free (un);
-          
+
           if (pkg)
             {
               debug_spew ("Preferring uninstalled version of package '%s'\n", name);
               return pkg;
             }
         }
-      
+
       location = g_hash_table_lookup (locations, name);
     }
-  
+
   if (location == NULL)
     {
       if (warn)
@@ -322,18 +322,18 @@ internal_get_package (const char *name, gboolean warn)
     }
 
   debug_spew ("Reading '%s' from file '%s'\n", name, location);
-  pkg = parse_package_file (location, ignore_requires, ignore_private_libs, 
+  pkg = parse_package_file (location, ignore_requires, ignore_private_libs,
 			    ignore_requires_private);
-  
+
   if (pkg == NULL)
     {
       debug_spew ("Failed to parse '%s'\n", location);
       return NULL;
     }
-  
+
   if (strstr (location, "uninstalled.pc"))
     pkg->uninstalled = TRUE;
-  
+
   if (location != name)
     pkg->key = g_strdup (name);
   else
@@ -347,7 +347,7 @@ internal_get_package (const char *name, gboolean warn)
         --start;
 
       g_assert (end >= start);
-      
+
       pkg->key = g_strndup (start, end - start);
     }
 
@@ -356,12 +356,12 @@ internal_get_package (const char *name, gboolean warn)
 
   debug_spew ("Path position of '%s' is %d\n",
               pkg->name, pkg->path_position);
-  
+
   verify_package (pkg);
 
   debug_spew ("Adding '%s' to list of known packages, returning as package '%s'\n",
               pkg->key, name);
-  
+
   g_hash_table_insert (packages, pkg->key, pkg);
 
   return pkg;
@@ -385,7 +385,7 @@ string_list_strip_duplicates (GSList *list)
   GHashTable *table;
   GSList *tmp;
   GSList *nodups = NULL;
-  
+
   table = g_hash_table_new (g_str_hash, g_str_equal);
 
   tmp = list;
@@ -405,9 +405,9 @@ string_list_strip_duplicates (GSList *list)
     }
 
   nodups = g_slist_reverse (nodups);
-  
+
   g_hash_table_destroy (table);
-  
+
   return nodups;
 }
 
@@ -418,11 +418,11 @@ string_list_strip_duplicates_from_back (GSList *list)
   GSList *tmp;
   GSList *nodups = NULL;
   GSList *reversed;
-  
+
   table = g_hash_table_new (g_str_hash, g_str_equal);
 
   reversed = g_slist_reverse (g_slist_copy (list));
-  
+
   tmp = reversed;
   while (tmp != NULL)
     {
@@ -436,14 +436,14 @@ string_list_strip_duplicates_from_back (GSList *list)
         {
           debug_spew (" removing duplicate (from back) \"%s\"\n", tmp->data);
         }
-      
+
       tmp = g_slist_next (tmp);
     }
 
   g_slist_free (reversed);
-  
+
   g_hash_table_destroy (table);
-  
+
   return nodups;
 }
 
@@ -453,7 +453,7 @@ string_list_to_string (GSList *list)
   GSList *tmp;
   GString *str = g_string_new ("");
   char *retval;
-  
+
   tmp = list;
   while (tmp != NULL) {
     char *tmpstr = (char*) tmp->data;
@@ -494,7 +494,7 @@ get_L_libs (Package *pkg)
 
 static GSList*
 get_other_libs (Package *pkg)
-{  
+{
   return pkg->other_libs;
 }
 
@@ -533,7 +533,7 @@ pathposcmp (gconstpointer a, gconstpointer b)
 {
   const Package *pa = a;
   const Package *pb = b;
-  
+
   if (pa->path_position < pb->path_position)
     return -1;
   else if (pa->path_position > pb->path_position)
@@ -549,7 +549,7 @@ spew_package_list (const char *name,
   GSList *tmp;
 
   debug_spew (" %s: ", name);
-  
+
   tmp = list;
   while (tmp != NULL)
     {
@@ -583,7 +583,7 @@ recursive_fill_list (Package *pkg, GetListFunc func, GSList **listp)
   GSList *tmp;
 
   fill_one_level (pkg, func, listp);
-  
+
   tmp = (*func) (pkg);
 
   while (tmp != NULL)
@@ -611,22 +611,22 @@ fill_list_single_package (Package *pkg, GetListFunc func,
   recursive_fill_list (pkg,
 		       include_private ? get_requires_private : get_requires,
 		       &packages);
-  
+
   if (in_path_order)
     {
       spew_package_list ("original", packages);
-      
+
       packages = packages_sort_by_path_position (packages);
-      
+
       spew_package_list ("sorted", packages);
     }
-  
+
   /* Convert package list to string list */
   tmp = packages;
   while (tmp != NULL)
     {
       fill_one_level (tmp->data, func, listp);
-      
+
       tmp = tmp->next;
     }
 
@@ -655,17 +655,17 @@ fill_list (GSList *packages, GetListFunc func,
   if (in_path_order)
     {
       spew_package_list ("original", expanded);
-      
+
       expanded = packages_sort_by_path_position (expanded);
-      
+
       spew_package_list ("sorted", expanded);
     }
-  
+
   tmp = expanded;
   while (tmp != NULL)
     {
       fill_one_level (tmp->data, func, listp);
-      
+
       tmp = tmp->next;
     }
 
@@ -709,7 +709,7 @@ verify_package (Package *pkg)
                "Internal pkg-config error, package with no key, please file a bug report\n");
       exit (1);
     }
-  
+
   if (pkg->name == NULL)
     {
       verbose_error ("Package '%s' has no Name: field\n",
@@ -730,7 +730,7 @@ verify_package (Package *pkg)
                      pkg->key);
       exit (1);
     }
-  
+
   /* Make sure we have the right version for all requirements */
 
   iter = pkg->requires_private;
@@ -761,14 +761,14 @@ verify_package (Package *pkg)
               exit (1);
             }
         }
-                                   
+
       iter = g_slist_next (iter);
     }
 
   /* Make sure we didn't drag in any conflicts via Requires
    * (inefficient algorithm, who cares)
    */
-  
+
   recursive_fill_list (pkg, get_requires_private, &requires);
   conflicts = get_conflicts (pkg);
 
@@ -776,7 +776,7 @@ verify_package (Package *pkg)
   while (requires_iter != NULL)
     {
       Package *req = requires_iter->data;
-      
+
       conflicts_iter = conflicts;
 
       while (conflicts_iter != NULL)
@@ -802,17 +802,17 @@ verify_package (Package *pkg)
 
           conflicts_iter = g_slist_next (conflicts_iter);
         }
-      
+
       requires_iter = g_slist_next (requires_iter);
     }
-  
+
   g_slist_free (requires);
 
   /* We make a list of system directories that gcc expects so we can remove
    * them.
    */
 
-  search_path = g_getenv ("PKG_CONFIG_SYSTEM_INCLUDE_PATH");
+  search_path = getenv ("PKG_CONFIG_SYSTEM_INCLUDE_PATH");
 
   if (search_path == NULL)
     {
@@ -821,13 +821,13 @@ verify_package (Package *pkg)
 
   system_directories = add_env_variable_to_list (system_directories, search_path);
 
-  search_path = g_getenv ("C_INCLUDE_PATH");
+  search_path = getenv ("C_INCLUDE_PATH");
   if (search_path != NULL)
     {
       system_directories = add_env_variable_to_list (system_directories, search_path);
     }
 
-  search_path = g_getenv ("CPLUS_INCLUDE_PATH");
+  search_path = getenv ("CPLUS_INCLUDE_PATH");
   if (search_path != NULL)
     {
       system_directories = add_env_variable_to_list (system_directories, search_path);
@@ -858,12 +858,12 @@ verify_package (Package *pkg)
 		{
 		  debug_spew ("Package %s has %s in Cflags\n",
 			      pkg->name, (gchar *)iter->data);
-		  if (g_getenv ("PKG_CONFIG_ALLOW_SYSTEM_CFLAGS") == NULL)
+		  if (getenv ("PKG_CONFIG_ALLOW_SYSTEM_CFLAGS") == NULL)
 		    {
 		      debug_spew ("Removing %s from cflags for %s\n", iter->data, pkg->key);
 		      ++count;
 		      iter->data = NULL;
-		      
+
 		      break;
 		    }
 		}
@@ -885,7 +885,7 @@ verify_package (Package *pkg)
 
   system_directories = NULL;
 
-  search_path = g_getenv ("PKG_CONFIG_SYSTEM_LIBRARY_PATH");
+  search_path = getenv ("PKG_CONFIG_SYSTEM_LIBRARY_PATH");
 
   if (search_path == NULL)
     {
@@ -916,7 +916,7 @@ verify_package (Package *pkg)
             {
               debug_spew ("Package %s has -L %s in Libs\n",
                           pkg->name, system_libpath);
-              if (g_getenv ("PKG_CONFIG_ALLOW_SYSTEM_LIBS") == NULL)
+              if (getenv ("PKG_CONFIG_ALLOW_SYSTEM_LIBS") == NULL)
                 {
                   iter->data = NULL;
                   ++count;
@@ -944,18 +944,18 @@ get_merged (Package *pkg, GetListFunc func, gboolean in_path_order,
   GSList *list;
   GSList *dups_list = NULL;
   char *retval;
-  
+
   fill_list_single_package (pkg, func, &dups_list, in_path_order,
 			    include_private);
-  
+
   list = string_list_strip_duplicates (dups_list);
 
   g_slist_free (dups_list);
-  
+
   retval = string_list_to_string (list);
 
   g_slist_free (list);
-  
+
   return retval;
 }
 
@@ -966,18 +966,18 @@ get_merged_from_back (Package *pkg, GetListFunc func, gboolean in_path_order,
   GSList *list;
   GSList *dups_list = NULL;
   char *retval;
-  
+
   fill_list_single_package (pkg, func, &dups_list, in_path_order,
 			    include_private);
-  
+
   list = string_list_strip_duplicates_from_back (dups_list);
 
   g_slist_free (dups_list);
-  
+
   retval = string_list_to_string (list);
 
   g_slist_free (list);
-  
+
   return retval;
 }
 
@@ -990,15 +990,15 @@ get_multi_merged (GSList *pkgs, GetListFunc func, gboolean in_path_order,
   char *retval;
 
   fill_list (pkgs, func, &dups_list, in_path_order, include_private);
-  
+
   list = string_list_strip_duplicates (dups_list);
 
   g_slist_free (dups_list);
-  
+
   retval = string_list_to_string (list);
 
   g_slist_free (list);
-  
+
   return retval;
 }
 
@@ -1011,15 +1011,15 @@ get_multi_merged_from_back (GSList *pkgs, GetListFunc func,
   char *retval;
 
   fill_list (pkgs, func, &dups_list, in_path_order, include_private);
-  
+
   list = string_list_strip_duplicates_from_back (dups_list);
 
   g_slist_free (dups_list);
-  
+
   retval = string_list_to_string (list);
 
   g_slist_free (list);
-  
+
   return retval;
 }
 
@@ -1084,8 +1084,8 @@ packages_get_all_libs (GSList *pkgs)
   char *other_libs;
   GString *str;
   char *retval;
-  
-  str = g_string_new ("");  
+
+  str = g_string_new ("");
 
   other_libs = packages_get_other_libs (pkgs);
   L_libs = packages_get_L_libs (pkgs);
@@ -1093,12 +1093,12 @@ packages_get_all_libs (GSList *pkgs)
 
   if (other_libs)
     g_string_append (str, other_libs);
-  
+
  if (L_libs)
     g_string_append (str, L_libs);
-  
+
   if (l_libs)
-    g_string_append (str, l_libs); 
+    g_string_append (str, l_libs);
 
   g_free (l_libs);
   g_free (L_libs);
@@ -1146,7 +1146,6 @@ packages_get_other_cflags (GSList *pkgs)
 char *
 package_get_cflags (Package *pkg)
 {
-
   g_assert_not_reached ();
   return NULL;
 }
@@ -1158,15 +1157,15 @@ packages_get_all_cflags (GSList     *pkgs)
   char *other_cflags;
   GString *str;
   char *retval;
-  
-  str = g_string_new ("");  
+
+  str = g_string_new ("");
 
   other_cflags = packages_get_other_cflags (pkgs);
   I_cflags = packages_get_I_cflags (pkgs);
 
   if (other_cflags)
     g_string_append (str, other_cflags);
-  
+
  if (I_cflags)
     g_string_append (str, I_cflags);
 
@@ -1193,9 +1192,9 @@ define_global_variable (const char *varname,
       verbose_error ("Variable '%s' defined twice globally\n", varname);
       exit (1);
     }
-  
+
   g_hash_table_insert (globals, g_strdup (varname), g_strdup (varval));
-      
+
   debug_spew ("Global variable definition '%s' = '%s'\n",
               varname, varval);
 }
@@ -1208,7 +1207,7 @@ package_get_var (Package *pkg,
 
   if (globals)
     varval = g_strdup (g_hash_table_lookup (globals, var));
-  
+
   if (varval == NULL && pkg->vars)
     varval = g_strdup (g_hash_table_lookup (pkg->vars, var));
 
@@ -1226,9 +1225,9 @@ packages_get_var (GSList     *pkgs,
   GSList *tmp;
   GString *str;
   char *retval;
-  
+
   str = g_string_new ("");
-  
+
   tmp = pkgs;
   while (tmp != NULL)
     {
@@ -1236,11 +1235,11 @@ packages_get_var (GSList     *pkgs,
       char *var;
 
       var = package_get_var (pkg, varname);
-      
+
       if (var)
         {
           g_string_append (str, var);
-          g_string_append_c (str, ' ');                
+          g_string_append_c (str, ' ');
           g_free (var);
         }
 
@@ -1258,7 +1257,7 @@ packages_get_var (GSList     *pkgs,
 
 
 
-/* Stolen verbatim from rpm/lib/misc.c 
+/* Stolen verbatim from rpm/lib/misc.c
    RPM is Copyright (c) 1998 by Red Hat Software, Inc.,
    and may be distributed under the terms of the GPL and LGPL.
 */
@@ -1272,7 +1271,7 @@ static int rpmvercmp(const char * a, const char * b) {
     char * one, * two;
     int rc;
     int isnum;
-    
+
     /* easy comparison to see if versions are identical */
     if (!strcmp(a, b)) return 0;
 
@@ -1308,7 +1307,7 @@ static int rpmvercmp(const char * a, const char * b) {
 	    while (*str2 && isalpha((guchar)*str2)) str2++;
 	    isnum = 0;
 	}
-		
+
 	/* save character at the end of the alpha or numeric segment */
 	/* so that they can be restored after the comparison */
 	oldch1 = *str1;
@@ -1326,7 +1325,7 @@ static int rpmvercmp(const char * a, const char * b) {
 	    /* this used to be done by converting the digit segments */
 	    /* to ints using atoi() - it's changed because long  */
 	    /* digit segments can overflow an int - this should fix that. */
-	  
+
 	    /* throw away any leading zeros - it's a number, right? */
 	    while (*one == '0') one++;
 	    while (*two == '0') two++;
@@ -1342,7 +1341,7 @@ static int rpmvercmp(const char * a, const char * b) {
 	/* compare */
 	rc = strcmp(one, two);
 	if (rc) return rc;
-	
+
 	/* restore character that was replaced by null above */
 	*str1 = oldch1;
 	one = str1;
@@ -1399,7 +1398,7 @@ version_test (ComparisonType comparison,
     case ALWAYS_MATCH:
       return TRUE;
       break;
-      
+
     default:
       g_assert_not_reached ();
       break;
@@ -1440,7 +1439,7 @@ comparison_to_str (ComparisonType comparison)
     case ALWAYS_MATCH:
       return "(any)";
       break;
-      
+
     default:
       g_assert_not_reached ();
       break;
@@ -1467,7 +1466,7 @@ packages_foreach (gpointer key, gpointer value, gpointer data)
       char *pad;
 
       pad = g_strnfill (GPOINTER_TO_INT (data) - strlen (pkg->key), ' ');
-      
+
       printf ("%s%s%s - %s\n",
               pkg->key, pad, pkg->name, pkg->description);
 

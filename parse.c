@@ -1,7 +1,7 @@
-/* 
+/*
  * Copyright (C) 2006-2011 Tollef Fog Heen <tfheen@err.no>
  * Copyright (C) 2001, 2002, 2005-2006 Red Hat Inc.
- * 
+ *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
  * published by the Free Software Foundation; either version 2 of the
@@ -11,7 +11,7 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
@@ -54,7 +54,7 @@ int msvc_syntax = FALSE;
  * '\' proceding a line delimiter combines adjacent lines. A '\' proceding
  * any other character is ignored and written into the output buffer
  * unmodified.
- * 
+ *
  * Return value: %FALSE if the stream was already at an EOF character.
  **/
 static gboolean
@@ -65,18 +65,18 @@ read_one_line (FILE *stream, GString *str)
   int n_read = 0;
 
   g_string_truncate (str, 0);
-  
+
   while (1)
     {
       int c;
-      
+
       c = getc (stream);
 
       if (c == EOF)
 	{
 	  if (quoted)
 	    g_string_append_c (str, '\\');
-	  
+
 	  goto done;
 	}
       else
@@ -85,7 +85,7 @@ read_one_line (FILE *stream, GString *str)
       if (quoted)
 	{
 	  quoted = FALSE;
-	  
+
 	  switch (c)
 	    {
 	    case '#':
@@ -100,11 +100,11 @@ read_one_line (FILE *stream, GString *str)
 		      (c == '\r' && next_c == '\n') ||
 		      (c == '\n' && next_c == '\r')))
 		  ungetc (next_c, stream);
-		
+
 		break;
 	      }
 	    default:
-	      g_string_append_c (str, '\\');	      
+	      g_string_append_c (str, '\\');
 	      g_string_append_c (str, c);
 	    }
 	}
@@ -147,8 +147,12 @@ trim_string (const char *str)
 {
   int len;
 
-  g_return_val_if_fail (str != NULL, NULL);
-  
+  if(!str)
+  {
+    debug_spew ("trim_string(): called with NULL string!\n");
+    return(NULL);
+  }
+
   while (*str && isspace ((guchar)*str))
     str++;
 
@@ -165,7 +169,7 @@ trim_and_sub (Package *pkg, const char *str, const char *path)
   char *trimmed;
   GString *subst;
   char *p;
-  
+
   trimmed = trim_string (str);
 
   subst = g_string_new ("");
@@ -187,7 +191,7 @@ trim_and_sub (Package *pkg, const char *str, const char *path)
           char *var_start;
           char *varname;
           char *varval;
-          
+
           var_start = &p[2];
 
           /* Get up to close brace. */
@@ -197,14 +201,14 @@ trim_and_sub (Package *pkg, const char *str, const char *path)
           varname = g_strndup (var_start, p - var_start);
 
           ++p; /* past brace */
-          
+
           varval = package_get_var (pkg, varname);
-          
+
           if (varval == NULL)
             {
               verbose_error ("Variable '%s' not defined in '%s'\n",
                              varname, path);
-              
+
               exit (1);
             }
 
@@ -217,7 +221,7 @@ trim_and_sub (Package *pkg, const char *str, const char *path)
         {
           g_string_append_c (subst, *p);
 
-          ++p;          
+          ++p;
         }
     }
 
@@ -237,7 +241,7 @@ parse_name (Package *pkg, const char *str, const char *path)
 
       exit (1);
     }
-  
+
   pkg->name = trim_and_sub (pkg, str, path);
 }
 
@@ -250,7 +254,7 @@ parse_version (Package *pkg, const char *str, const char *path)
 
       exit (1);
     }
-  
+
   pkg->version = trim_and_sub (pkg, str, path);
 }
 
@@ -263,7 +267,7 @@ parse_description (Package *pkg, const char *str, const char *path)
 
       exit (1);
     }
-  
+
   pkg->description = trim_and_sub (pkg, str, path);
 }
 
@@ -285,7 +289,7 @@ typedef enum
   BEFORE_OPERATOR = 2,
   IN_OPERATOR = 3,
   AFTER_OPERATOR = 4,
-  IN_MODULE_VERSION = 5  
+  IN_MODULE_VERSION = 5
 } ModuleSplitState;
 
 #define PARSE_SPEW 0
@@ -300,7 +304,7 @@ split_module_list (const char *str, const char *path)
   ModuleSplitState last_state = OUTSIDE_MODULE;
 
   /*   fprintf (stderr, "Parsing: '%s'\n", str); */
-  
+
   start = str;
   p = str;
 
@@ -309,12 +313,12 @@ split_module_list (const char *str, const char *path)
 #if PARSE_SPEW
       fprintf (stderr, "p: %c state: %d last_state: %d\n", *p, state, last_state);
 #endif
-      
+
       switch (state)
         {
         case OUTSIDE_MODULE:
           if (!MODULE_SEPARATOR (*p))
-            state = IN_MODULE_NAME;          
+            state = IN_MODULE_NAME;
           break;
 
         case IN_MODULE_NAME:
@@ -364,7 +368,7 @@ split_module_list (const char *str, const char *path)
           if (MODULE_SEPARATOR (*p))
             state = OUTSIDE_MODULE;
           break;
-          
+
         default:
           g_assert_not_reached ();
         }
@@ -379,11 +383,11 @@ split_module_list (const char *str, const char *path)
 #if PARSE_SPEW
           fprintf (stderr, "found module: '%s'\n", module);
 #endif
-          
+
           /* reset start */
           start = p;
         }
-      
+
       last_state = state;
       ++p;
     }
@@ -397,9 +401,9 @@ split_module_list (const char *str, const char *path)
 #if PARSE_SPEW
       fprintf (stderr, "found module: '%s'\n", module);
 #endif
-      
+
     }
-  
+
   retval = g_slist_reverse (retval);
 
   return retval;
@@ -413,24 +417,24 @@ parse_module_list (Package *pkg, const char *str, const char *path)
   GSList *retval = NULL;
 
   split = split_module_list (str, path);
-  
+
   iter = split;
   while (iter != NULL)
     {
       RequiredVersion *ver;
       char *p;
       char *start;
-      
+
       p = iter->data;
 
       ver = g_new0 (RequiredVersion, 1);
       ver->comparison = ALWAYS_MATCH;
       ver->owner = pkg;
       retval = g_slist_prepend (retval, ver);
-      
+
       while (*p && MODULE_SEPARATOR (*p))
         ++p;
-      
+
       start = p;
 
       while (*p && !isspace ((guchar)*p))
@@ -445,10 +449,10 @@ parse_module_list (Package *pkg, const char *str, const char *path)
       if (*start == '\0')
         {
           verbose_error ("Empty package name in Requires or Conflicts in file '%s'\n", path);
-          
+
           exit (1);
         }
-      
+
       ver->name = g_strdup (start);
 
       start = p;
@@ -461,7 +465,7 @@ parse_module_list (Package *pkg, const char *str, const char *path)
           *p = '\0';
           ++p;
         }
-      
+
       if (*start != '\0')
         {
           if (strcmp (start, "=") == 0)
@@ -479,13 +483,13 @@ parse_module_list (Package *pkg, const char *str, const char *path)
           else
             {
               verbose_error ("Unknown version comparison operator '%s' after package name '%s' in file '%s'\n", start, ver->name, path);
-              
+
               exit (1);
             }
         }
 
       start = p;
-      
+
       while (*p && !MODULE_SEPARATOR (*p))
         ++p;
 
@@ -494,11 +498,11 @@ parse_module_list (Package *pkg, const char *str, const char *path)
           *p = '\0';
           ++p;
         }
-      
+
       if (ver->comparison != ALWAYS_MATCH && *start == '\0')
         {
           verbose_error ("Comparison operator but no version after package name '%s' in file '%s'\n", ver->name, path);
-          
+
           exit (1);
         }
 
@@ -508,7 +512,7 @@ parse_module_list (Package *pkg, const char *str, const char *path)
         }
 
       g_assert (ver->name);
-      
+
       iter = g_slist_next (iter);
     }
 
@@ -526,7 +530,7 @@ parse_requires (Package *pkg, const char *str, const char *path)
   GSList *parsed;
   GSList *iter;
   char *trimmed;
-  
+
   if (pkg->requires)
     {
       verbose_error ("Requires field occurs twice in '%s'\n", path);
@@ -537,28 +541,28 @@ parse_requires (Package *pkg, const char *str, const char *path)
   trimmed = trim_and_sub (pkg, str, path);
   parsed = parse_module_list (pkg, trimmed, path);
   g_free (trimmed);
-  
+
   iter = parsed;
   while (iter != NULL)
     {
       Package *req;
       RequiredVersion *ver = iter->data;
-      
+
       req = get_package (ver->name);
 
       if (req == NULL)
         {
           verbose_error ("Package '%s', required by '%s', not found\n",
                          ver->name, pkg->name ? pkg->name : path);
-          
+
           exit (1);
         }
 
       if (pkg->required_versions == NULL)
         pkg->required_versions = g_hash_table_new (g_str_hash, g_str_equal);
-      
+
       g_hash_table_insert (pkg->required_versions, ver->name, ver);
-      
+
       pkg->requires = g_slist_prepend (pkg->requires, req);
 
       iter = g_slist_next (iter);
@@ -573,7 +577,7 @@ parse_requires_private (Package *pkg, const char *str, const char *path)
   GSList *parsed;
   GSList *iter;
   char *trimmed;
-  
+
   if (pkg->requires_private)
     {
       verbose_error ("Requires.private field occurs twice in '%s'\n", path);
@@ -584,28 +588,28 @@ parse_requires_private (Package *pkg, const char *str, const char *path)
   trimmed = trim_and_sub (pkg, str, path);
   parsed = parse_module_list (pkg, trimmed, path);
   g_free (trimmed);
-  
+
   iter = parsed;
   while (iter != NULL)
     {
       Package *req;
       RequiredVersion *ver = iter->data;
-      
+
       req = get_package (ver->name);
 
       if (req == NULL)
         {
           verbose_error ("Package '%s', required by '%s', not found\n",
                          ver->name, pkg->name ? pkg->name : path);
-          
+
           exit (1);
         }
 
       if (pkg->required_versions == NULL)
         pkg->required_versions = g_hash_table_new (g_str_hash, g_str_equal);
-      
+
       g_hash_table_insert (pkg->required_versions, ver->name, ver);
-      
+
       pkg->requires_private = g_slist_prepend (pkg->requires_private, req);
 
       iter = g_slist_next (iter);
@@ -618,7 +622,7 @@ static void
 parse_conflicts (Package *pkg, const char *str, const char *path)
 {
   char *trimmed;
-  
+
   if (pkg->conflicts)
     {
       verbose_error ("Conflicts field occurs twice in '%s'\n", path);
@@ -739,19 +743,19 @@ static void
 parse_libs (Package *pkg, const char *str, const char *path)
 {
   /* Strip out -l and -L flags, put them in a separate list. */
-  
+
   char *trimmed;
   char **argv = NULL;
   int argc = 0;
   int result;
-  
+
   if (pkg->libs_num > 0)
     {
       verbose_error ("Libs field occurs twice in '%s'\n", path);
 
       exit (1);
     }
-  
+
   trimmed = trim_and_sub (pkg, str, path);
 
   if (trimmed && *trimmed)
@@ -784,23 +788,23 @@ parse_libs_private (Package *pkg, const char *str, const char *path)
     be used for libraries which are exposed through the library in
     question.  An example of an exposed library is GTK+ exposing Glib.
     A common example of a private library is libm.
-    
+
     Generally, if include another library's headers in your own, it's
     a public dependency and not a private one.
   */
-  
+
   char *trimmed;
   char **argv = NULL;
   int argc = 0;
   int result;
-  
+
   if (pkg->libs_private_num > 0)
     {
       verbose_error ("Libs.private field occurs twice in '%s'\n", path);
 
       exit (1);
     }
-  
+
   trimmed = trim_and_sub (pkg, str, path);
 
   if (trimmed && *trimmed)
@@ -828,20 +832,20 @@ static void
 parse_cflags (Package *pkg, const char *str, const char *path)
 {
   /* Strip out -I flags, put them in a separate list. */
-  
+
   char *trimmed;
   char **argv = NULL;
   int argc = 0;
   int result;
   int i;
-  
+
   if (pkg->I_cflags || pkg->other_cflags)
     {
       verbose_error ("Cflags field occurs twice in '%s'\n", path);
 
       exit (1);
     }
-  
+
   trimmed = trim_and_sub (pkg, str, path);
 
   if (trimmed && *trimmed)
@@ -890,7 +894,7 @@ parse_cflags (Package *pkg, const char *str, const char *path)
       }
 
       g_free (arg);
-      
+
       ++i;
     }
 
@@ -939,15 +943,15 @@ parse_line (Package *pkg, const char *untrimmed, const char *path,
   char *tag;
 
   debug_spew ("  line>%s\n", untrimmed);
-  
+
   str = trim_string (untrimmed);
-  
+
   if (*str == '\0') /* empty line */
     {
       g_free(str);
       return;
     }
-  
+
   p = str;
 
   /* Get first word */
@@ -958,7 +962,7 @@ parse_line (Package *pkg, const char *untrimmed, const char *path,
     p++;
 
   tag = g_strndup (str, p - str);
-  
+
   while (*p && isspace ((guchar)*p))
     ++p;
 
@@ -987,7 +991,7 @@ parse_line (Package *pkg, const char *untrimmed, const char *path,
           else
 	    goto cleanup;
         }
-      else if ((strcmp (tag, "Libs.private") == 0) && 
+      else if ((strcmp (tag, "Libs.private") == 0) &&
                ignore_private_libs == FALSE)
         parse_libs_private (pkg, p, path);
       else if (strcmp (tag, "Libs") == 0)
@@ -1015,11 +1019,11 @@ parse_line (Package *pkg, const char *untrimmed, const char *path,
       /* variable */
       char *varname;
       char *varval;
-      
+
       ++p;
       while (*p && isspace ((guchar)*p))
         ++p;
-      
+
       if (pkg->vars == NULL)
         pkg->vars = g_hash_table_new (g_str_hash, g_str_equal);
 
@@ -1043,9 +1047,9 @@ parse_line (Package *pkg, const char *untrimmed, const char *path,
 	       pathnamecmp (prefix + prefix_len - share_pkgconfig_len, share_pkgconfig) == 0))
 	    {
 	      /* It ends in lib\pkgconfig or share\pkgconfig. Good. */
-	      
+
 	      gchar *q;
-	      
+
 	      orig_prefix = g_strdup (p);
 
 	      prefix = g_strdup (prefix);
@@ -1054,7 +1058,7 @@ parse_line (Package *pkg, const char *untrimmed, const char *path,
 		prefix[prefix_len - lib_pkgconfig_len] = '\0';
 	      else
 		prefix[prefix_len - share_pkgconfig_len] = '\0';
-	      
+
 	      /* Turn backslashes into slashes or
 	       * poptParseArgvString() will eat them when ${prefix}
 	       * has been expanded in parse_libs().
@@ -1094,15 +1098,15 @@ parse_line (Package *pkg, const char *untrimmed, const char *path,
         }
 
       varname = g_strdup (tag);
-      varval = trim_and_sub (pkg, p, path);     
+      varval = trim_and_sub (pkg, p, path);
 
       debug_spew (" Variable declaration, '%s' has value '%s'\n",
                   varname, varval);
       g_hash_table_insert (pkg->vars, varname, varval);
-  
+
     }
 
- cleanup:  
+ cleanup:
   g_free (str);
   g_free (tag);
 }
@@ -1116,37 +1120,37 @@ parse_package_file (const char *path, gboolean ignore_requires,
   Package *pkg;
   GString *str;
   gboolean one_line = FALSE;
-  
+
   f = fopen (path, "r");
 
   if (f == NULL)
     {
       verbose_error ("Failed to open '%s': %s\n",
                      path, strerror (errno));
-      
+
       return NULL;
     }
 
   debug_spew ("Parsing package file '%s'\n", path);
-  
+
   pkg = g_new0 (Package, 1);
 
   if (path)
     {
-      pkg->pcfiledir = g_dirname (path);
+      pkg->pcfiledir = g_path_get_dirname (path);
     }
   else
     {
       debug_spew ("No pcfiledir determined for package\n");
       pkg->pcfiledir = g_strdup ("???????");
     }
-  
+
   str = g_string_new ("");
 
   while (read_one_line (f, str))
     {
       one_line = TRUE;
-      
+
       parse_line (pkg, str->str, path, ignore_requires, ignore_private_libs,
 		  ignore_requires_private);
 
@@ -1162,9 +1166,9 @@ parse_package_file (const char *path, gboolean ignore_requires,
   /* make ->requires_private include a copy of the public requires too */
   pkg->requires_private = g_slist_concat(g_slist_copy (pkg->requires),
 					 pkg->requires_private);
-  
+
   pkg->requires = g_slist_reverse (pkg->requires);
-  
+
   pkg->requires_private = g_slist_reverse (pkg->requires_private);
 
   pkg->I_cflags = g_slist_reverse (pkg->I_cflags);
@@ -1173,6 +1177,6 @@ parse_package_file (const char *path, gboolean ignore_requires,
   pkg->l_libs = g_slist_reverse (pkg->l_libs);
   pkg->L_libs = g_slist_reverse (pkg->L_libs);
   pkg->other_libs = g_slist_reverse (pkg->other_libs);
-  
+
   return pkg;
 }

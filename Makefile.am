@@ -16,7 +16,7 @@ m4_DATA = pkg.m4
 dist_doc_DATA = pkg-config-guide.html
 
 man_MANS = pkg-config.1
-EXTRA_DIST = $(m4_DATA) $(man_MANS) README.win32
+EXTRA_DIST = $(m4_DATA) $(man_MANS) README.win32 README.pkg-config-lite
 
 bin_PROGRAMS = pkg-config
 AM_CFLAGS=@WARN_CFLAGS@
@@ -38,6 +38,8 @@ INCLUDES= \
 endif
 
 pkg_config_SOURCES= \
+	glib-snippet.h \
+  glib-snippet.c \
 	pkg.h \
 	pkg.c \
 	parse.h \

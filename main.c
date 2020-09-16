@@ -48,7 +48,11 @@ debug_spew (const char *format, ...)
   gchar *str;
   FILE* stream;
 
-  g_return_if_fail (format != NULL);
+  if(!format)
+  {
+    fprintf(stderr, "ERROR: debug_spew(): NULL format string!\n");
+    return;
+  }
 
   if (!want_debug_spew)
     return;
@@ -74,8 +78,12 @@ verbose_error (const char *format, ...)
   va_list args;
   gchar *str;
   FILE* stream;
-  
-  g_return_if_fail (format != NULL);
+
+  if(!format)
+  {
+    fprintf(stderr, "ERROR: verbose_error(): NULL format string!\n");
+    return;
+  }
 
   if (!want_verbose_errors)
     return;
@@ -88,7 +96,7 @@ verbose_error (const char *format, ...)
     stream = stdout;
   else
     stream = stderr;
-  
+
   fputs (str, stream);
   fflush (stream);
 
@@ -294,11 +302,11 @@ main (int argc, char **argv)
     }
 
   search_path = getenv ("PKG_CONFIG_PATH");
-  if (search_path) 
+  if (search_path)
     {
       add_search_dirs(search_path, G_SEARCHPATH_SEPARATOR_S);
     }
-  if (getenv("PKG_CONFIG_LIBDIR") != NULL) 
+  if (getenv("PKG_CONFIG_LIBDIR") != NULL)
     {
       add_search_dirs(getenv("PKG_CONFIG_LIBDIR"), G_SEARCHPATH_SEPARATOR_S);
     }
@@ -655,7 +663,7 @@ main (int argc, char **argv)
             }
         }
     }
-  
+
   if (required_exact_version)
     {
       Package *pkg = packages->data;
